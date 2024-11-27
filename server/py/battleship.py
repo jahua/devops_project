@@ -53,11 +53,32 @@ class Battleship(Game):
 
     def __init__(self):
         """ Game initialization (set_state call not necessary) """
-        pass
+        self.reset()
+
+    def reset(self) -> None:
+        ships = [
+            Ship("carrier", 5),
+            Ship("battleship", 4),
+            Ship("cruiser", 3),
+            Ship("submarine", 3),
+            Ship("destroyer", 2)
+        ]
+        players = [
+            PlayerState("Player 1", [Ship(s.name, s.length) for s in ships], [], []),
+            PlayerState("Player 2", [Ship(s.name, s.length) for s in ships], [], [])
+        ]
+        self.state = BattleshipGameState(0, GamePhase.SETUP, None, players)
 
     def print_state(self) -> None:
         """ Set the game to a given state """
-        pass
+        print(f"Active player: {self.state.players[self.state.idx_player_active].name}")
+        print(f"Phase: {self.state.phase}")
+        print(f"Winner: {self.state.winner}")
+        for player in self.state.players:
+            print(f"{player.name}:")
+            print(f"  Ships: {[f'{ship.name}: {ship.location}' for ship in player.ships]}")
+            print(f"  Shots: {player.shots}")
+            print(f"  Successful shots: {player.successful_shots}")
 
     def get_state(self) -> BattleshipGameState:
         """ Get the complete, unmasked game state """
