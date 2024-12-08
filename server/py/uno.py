@@ -78,10 +78,8 @@ class Uno(Game):
 
     def __init__(self) -> None:
         """ Important: Game initialization also requires a set_state call to set the number of players """
-        state = GameState(cnt_player=3, list_player =[], list_card_draw=[], list_card_discard=[],
-                          phase=GamePhase.SETUP, direction= 1, color= "", cnt_to_draw=0,
-                          idx_player_active=0, has_drawn=False)
-        self.state = self.set_state(state)
+        state = GameState(cnt_player=3, phase=GamePhase.SETUP, direction= 1, idx_player_active=0)
+        self.set_state(state)
 
     def set_state(self, state: GameState) -> None:
         """ Set the game to a given state """
@@ -160,5 +158,5 @@ class RandomPlayer(Player):
 if __name__ == '__main__':
 
     uno = Uno()
-    state = GameState(cnt_player=3, idx_player_active=0, list_player=[], list_card_draw=[], list_card_discard=[], phase=GamePhase.SETUP)
+    state = GameState(cnt_player=3, idx_player_active=0, phase=GamePhase.SETUP)
     uno.set_state(state)
