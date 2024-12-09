@@ -145,8 +145,9 @@ class Uno(Game):
         pass
 
     def get_list_action(self) -> List[Action]:
-        """ Get a list of possible actions for the active player """
-        pass
+        """Get a list of possible actions for the active player"""
+        if self.state.phase != GamePhase.RUNNING:
+            return []
 
     def apply_action(self, action: Action) -> None:
         """ Apply the given action to the game """
