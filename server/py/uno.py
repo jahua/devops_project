@@ -141,8 +141,12 @@ class Uno(Game):
         return self.state
 
     def print_state(self) -> None:
-        """ Print the current game state """
-        pass
+        """Print the current game state"""
+        print(f"Phase: {self.state.phase}")
+        print(f"Active Player: {self.state.idx_player_active}")
+        print(f"Direction: {'Left' if self.state.direction == 1 else 'Right'}")
+        print(f"Current Color: {self.state.color}")
+
 
     def get_list_action(self) -> List[Action]:
         """Get a list of possible actions for the active player"""
