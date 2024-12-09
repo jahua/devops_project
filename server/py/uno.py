@@ -158,6 +158,36 @@ class Uno(Game):
         if self.state.phase != GamePhase.RUNNING:
             return []
 
+        actions = []
+        current_player = self.state.list_player[self.state.idx_player_active]
+        current_card = self.state.list_card_discard[-1] if self.state.list_card_discard else None
+
+        # If player hasn't drawn and there are cards to draw
+        if not self.state.has_drawn and self.state.cnt_to_draw > 0:
+            return [Action(draw=self.state.cnt_to_draw)]
+
+        # Check each card in hand
+        for card in current_player.list_card:
+            if self._is_valid_play(card, current_card):
+                # For wild cards, create actions for each possible color
+                if card.symbol in ['wild', 'wilddraw4']:
+                    for color in ['red', 'green', 'yellow', 'blue']:
+                        actions.append(Action(card=card, color=color))
+                else:
+                    actions.append(Action(card=card))
+
+        # If no valid plays and haven't drawn yet, add draw action
+        if not actions and not self.state.has_drawn:
+            actions.append(Action(draw=1))
+
+        # Add UNO announcement possibility if player will have one card left
+        if len(current_player.list_card) == 2:
+            for action in actions:
+                if action.card:  # Only for play actions, not draw actions
+                    action.uno = True
+
+        return actions
+
     def apply_action(self, action: Action) -> None:
         """ Apply the given action to the game """
         pass
