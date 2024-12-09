@@ -189,8 +189,77 @@ class Uno(Game):
         return actions
 
     def apply_action(self, action: Action) -> None:
-        """ Apply the given action to the game """
-        pass
+        """Apply the given action to the game"""
+        if self.state.phase != GamePhase.RUNNING:
+            return
+
+        current_player = self.state.list_player[self.state.idx_player_active]
+
+        def move_to_next_player():
+            self.state.idx_player_active = (self.state.idx_player_active + self.state.direction) % self.state.cnt_player
+            self.state.has_drawn = False
+
+        # if the player has drawn and still cannot play, move to next player
+        if not action and self.state.has_drawn :
+            move_to_next_player()
+            return
+
+        # Handle draw action
+        if action.draw:
+            cards_to_draw = action.draw
+            while cards_to_draw > 0 and self.state.list_card_draw:
+                # Reshuffle discard pile if draw pile is empty
+                if not self.state.list_card_draw:
+                    top_card = self.state.list_card_discard.pop()
+                    self.state.list_card_draw = self.state.list_card_discard
+                    self.state.list_card_discard = [top_card]
+                    random.shuffle(self.state.list_card_draw)
+
+                if self.state.list_card_draw:
+                    current_player.list_card.append(self.state.list_card_draw.pop())
+                cards_to_draw -= 1
+
+            self.state.has_drawn = True
+            self.state.cnt_to_draw = 0
+            return
+
+        # Handle play card action
+        if action.card:
+            # Remove card from player's hand
+            current_player.list_card.remove(action.card)
+
+            # Add card to discard pile
+            self.state.list_card_discard.append(action.card)
+
+            # Update color (for wild cards)
+            self.state.color = action.color if action.color else action.card.color
+
+            # Handle special cards
+            if action.card.symbol:
+                if action.card.symbol == 'reverse':
+                    self.state.direction *= -1
+                elif action.card.symbol == 'skip':
+                    self.state.idx_player_active = (self.state.idx_player_active + 2 * self.state.direction) % self.state.cnt_player
+                    return
+                elif action.card.symbol == 'draw2':
+                    self.state.cnt_to_draw += 2
+                elif action.card.symbol == 'wilddraw4':
+                    self.state.cnt_to_draw += 4
+
+            # Check for game end
+            if len(current_player.list_card) == 0:
+                self.state.phase = GamePhase.FINISHED
+                return
+
+            # Check for UNO announcement
+            if len(current_player.list_card) == 1 and not action.uno:
+                # Player forgot to say UNO, draw 4 cards
+                for _ in range(4):
+                    if self.state.list_card_draw:
+                        current_player.list_card.append(self.state.list_card_draw.pop())
+
+        # Move to next player
+        move_to_next_player()
 
     def get_player_view(self, idx_player: int) -> GameState:
         """ Get the masked state for the active player (e.g. the oppontent's cards are face down)"""
