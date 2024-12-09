@@ -146,6 +146,11 @@ class Uno(Game):
         print(f"Active Player: {self.state.idx_player_active}")
         print(f"Direction: {'Left' if self.state.direction == 1 else 'Right'}")
         print(f"Current Color: {self.state.color}")
+        if self.state.list_card_discard:
+            print(f"Top Card: {self.state.list_card_discard[-1]}")
+        for idx, player in enumerate(self.state.list_player):
+            print(f"\nPlayer {idx}: {player.name}")
+            print(f"Cards: {player.list_card}")
 
 
     def get_list_action(self) -> List[Action]:
