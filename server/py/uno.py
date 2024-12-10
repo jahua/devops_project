@@ -255,16 +255,19 @@ class Uno(Game):
         # Handle draw action
         if action.draw:
             cards_to_draw = action.draw
-            while cards_to_draw > 0 and self.state.list_card_draw:
-                # Reshuffle discard pile if draw pile is empty
+            while cards_to_draw > 0:
                 if not self.state.list_card_draw:
-                    top_card = self.state.list_card_discard.pop()
-                    self.state.list_card_draw = self.state.list_card_discard
-                    self.state.list_card_discard = [top_card]
-                    random.shuffle(self.state.list_card_draw)
+                    # Reshuffle discard pile if draw pile is empty
+                    if len(self.state.list_card_discard) > 1:
+                        top_card = self.state.list_card_discard.pop()
+                        self.state.list_card_draw = self.state.list_card_discard
+                        self.state.list_card_discard = [top_card]
+                        random.shuffle(self.state.list_card_draw)
+                    else:
+                        # No cards left to draw
+                        break
 
-                if self.state.list_card_draw:
-                    current_player.list_card.append(self.state.list_card_draw.pop())
+                current_player.list_card.append(self.state.list_card_draw.pop())
                 cards_to_draw -= 1
 
             self.state.has_drawn = True
@@ -275,19 +278,17 @@ class Uno(Game):
         if action.card:
             # Remove card from player's hand
             current_player.list_card.remove(action.card)
-
             # Add card to discard pile
             self.state.list_card_discard.append(action.card)
-
             # Update color (for wild cards)
             self.state.color = action.color if action.color else action.card.color
-
             # Handle special cards
             if action.card.symbol:
                 if action.card.symbol == 'reverse':
                     self.state.direction *= -1
                 elif action.card.symbol == 'skip':
-                    self.state.idx_player_active = (self.state.idx_player_active + 2 * self.state.direction) % self.state.cnt_player
+                    self.state.idx_player_active = ((self.state.idx_player_active + 2 * self.state.direction) %
+                                                    self.state.cnt_player)
                     return
                 elif action.card.symbol == 'draw2':
                     self.state.cnt_to_draw += 2
