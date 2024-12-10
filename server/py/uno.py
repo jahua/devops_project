@@ -108,10 +108,14 @@ class Uno(Game):
             if len(self.state.list_card_draw) == 0:
                 return
 
-            # Initialize discard pile
-            initial_card = self.state.list_card_draw.pop()
+            # If a card has already been discarded
+            if len(self.state.list_card_discard) > 0:
+                initial_card = self.state.list_card_discard[-1]
+            else:
+                # Initialize discard pile
+                initial_card = self.state.list_card_draw.pop()
             # Handle case of first discarded card is wild
-            while initial_card.symbol == 'wilddraw4':
+            while initial_card.symbol == 'wilddraw4' and len(self.state.list_card_discard) == 0:
                 self.state.list_card_draw.append(initial_card)
                 random.shuffle(self.state.list_card_draw)
                 initial_card = self.state.list_card_draw.pop()
@@ -132,7 +136,9 @@ class Uno(Game):
                 self.state.cnt_to_draw += 2
                 # self.state.idx_player_active = (self.state.idx_player_active + 1) % self.state.cnt_player
 
-            self.state.list_card_discard = [initial_card]
+            # If a card has already been discarded
+            if len(self.state.list_card_discard) == 0:
+                self.state.list_card_discard = [initial_card]
             self.state.color = initial_card.color
             self.state.phase = GamePhase.RUNNING
 
