@@ -182,26 +182,51 @@ class Uno(Game):
             return []
 
         actions = []
-        current_player = self.state.list_player[self.state.idx_player_active]
-        current_card = self.state.list_card_discard[-1] if self.state.list_card_discard else None
+        if self.state.idx_player_active is not None:
+            current_player = self.state.list_player[self.state.idx_player_active]
+        else:
+            raise ValueError("idx_player_active is None, cannot retrieve the current player.")
+        current_card = self.state.list_card_discard[-1]
 
-        # If player hasn't drawn and there are cards to draw
-        if not self.state.has_drawn and self.state.cnt_to_draw > 0:
-            return [Action(draw=self.state.cnt_to_draw)]
+        # if first card on discard pile is WILD, player can play first any card he wants
+        if current_card.symbol == 'wild' and len(self.state.list_card_discard) == 1:
+            for card in current_player.list_card:
+                actions.append(Action(card=card, uno=False, color=card.color))
+            return actions
 
-        # Check each card in hand
+        can_play = False
+        # Check if the player can play
         for card in current_player.list_card:
             if self._is_valid_play(card, current_card):
-                # For wild cards, create actions for each possible color
-                if card.symbol in ['wild', 'wilddraw4']:
+                can_play = True
+                if card.symbol == 'wild':
                     for color in ['red', 'green', 'yellow', 'blue']:
                         actions.append(Action(card=card, color=color))
+                elif card.symbol == 'wilddraw4':
+                    for color in ['red', 'green', 'yellow', 'blue']:
+                        actions.append(Action(card=card, color=color, draw=4 + self.state.cnt_to_draw))
+                elif card.symbol == 'draw2':
+                    actions.append(Action(card=card, uno=False, color=card.color, draw=2 + self.state.cnt_to_draw))
+                elif card.symbol == 'skip':
+                    if self._is_valid_play(card, current_card):
+                        actions.append(Action(card=card, uno=False, color=card.color))
                 else:
-                    actions.append(Action(card=card))
-
-        # If no valid plays and haven't drawn yet, add draw action
-        if not actions and not self.state.has_drawn:
+                    actions.append(Action(card=card, uno=False, color=card.color))
+        if can_play and current_card.symbol not in ['draw2','wilddraw4']:
             actions.append(Action(draw=1))
+        elif not can_play and current_card.symbol == 'draw2':
+            return [Action(draw=2)]
+        elif not can_play and current_card.symbol == 'wilddraw4':
+            return [Action(draw=4)]
+        elif len(actions) == 0:
+            return [Action(draw=1)]
+
+
+
+        # # If player hasn't drawn and there are cards to draw
+        # if not self.state.has_drawn and self.state.cnt_to_draw > 0:
+        #     return [Action(draw=self.state.cnt_to_draw)]
+
 
         # Add UNO announcement possibility if player will have one card left
         if len(current_player.list_card) == 2:
