@@ -282,6 +282,11 @@ class Uno(Game):
         """ Get the masked state for the active player (e.g. the opponent's cards are face down)"""
         masked_state = self.state.model_copy(deep=True)
 
+        # Hide other players' cards
+        for i, player in enumerate(masked_state.list_player):
+            if i != idx_player:
+                player.list_card = [Card(color=None, number=None, symbol=None)] * len(player.list_card)
+
 
 class RandomPlayer(Player):
 
