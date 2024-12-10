@@ -279,8 +279,8 @@ class Uno(Game):
         move_to_next_player()
 
     def get_player_view(self, idx_player: int) -> GameState:
-        """ Get the masked state for the active player (e.g. the oppontent's cards are face down)"""
-        pass
+        """ Get the masked state for the active player (e.g. the opponent's cards are face down)"""
+        masked_state = self.state.model_copy(deep=True)
 
 
 class RandomPlayer(Player):
