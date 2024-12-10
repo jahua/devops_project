@@ -167,76 +167,103 @@ class Uno(Game):
         # Wild cards can always be played
         if card.symbol in ['wild', 'wilddraw4']:
             return True
-
-        # Match color
+            
+        # Match by color with current game color (not the card's color)
         if card.color == self.state.color:
             return True
-
-        # Match number or symbol
-        if current_card.number is not None and card.number == current_card.number:
+            
+        # Match by number
+        if card.number is not None and current_card.number is not None and card.number == current_card.number:
             return True
-        if current_card.symbol is not None and card.symbol == current_card.symbol:
+            
+        # Match by symbol (for special cards like SKIP, REVERSE, DRAW2)
+        if card.symbol is not None and current_card.symbol is not None and card.symbol == current_card.symbol:
             return True
-
+            
         return False
 
     def get_list_action(self) -> List[Action]:
-        """Get a list of possible actions for the active player"""
+        """Get list of valid actions for the current player"""
         if self.state.phase != GamePhase.RUNNING:
             return []
 
-        actions = []
-        if self.state.idx_player_active is not None:
-            current_player = self.state.list_player[self.state.idx_player_active]
-        else:
-            raise ValueError("idx_player_active is None, cannot retrieve the current player.")
+        actions: List[Action] = []
+        current_player = self.state.list_player[self.state.idx_player_active]
         current_card = self.state.list_card_discard[-1]
+        can_play = False
 
-        # if first card on discard pile is WILD, player can play first any card he wants
+        # Special case: if first card on discard pile is WILD, player can play any card
         if current_card.symbol == 'wild' and len(self.state.list_card_discard) == 1:
             for card in current_player.list_card:
-                actions.append(Action(card=card, uno=False, color=card.color))
+                if len(current_player.list_card) == 2:
+                    actions.append(Action(card=card, color=card.color, uno=True))
+                    actions.append(Action(card=card, color=card.color, uno=False))
+                else:
+                    actions.append(Action(card=card, color=card.color))
             return actions
 
-        can_play = False
-        # Check if the player can play
+        # If previous card is DRAW2 or WILDDRAW4 and cnt_to_draw > 0, player must draw unless they can play another draw card
+        if self.state.cnt_to_draw > 0:
+            if current_card.symbol == 'draw2':
+                for card in current_player.list_card:
+                    if card.symbol == 'draw2':
+                        if len(current_player.list_card) == 2:
+                            actions.append(Action(card=card, color=card.color, draw=2 + self.state.cnt_to_draw, uno=True))
+                            actions.append(Action(card=card, color=card.color, draw=2 + self.state.cnt_to_draw, uno=False))
+                        else:
+                            actions.append(Action(card=card, color=card.color, draw=2 + self.state.cnt_to_draw))
+            elif current_card.symbol == 'wilddraw4':
+                for card in current_player.list_card:
+                    if card.symbol == 'wilddraw4':
+                        for color in ['red', 'green', 'yellow', 'blue']:
+                            if len(current_player.list_card) == 2:
+                                actions.append(Action(card=card, color=color, draw=4 + self.state.cnt_to_draw, uno=True))
+                                actions.append(Action(card=card, color=color, draw=4 + self.state.cnt_to_draw, uno=False))
+                            else:
+                                actions.append(Action(card=card, color=color, draw=4 + self.state.cnt_to_draw))
+            if not actions:  # If no matching draw card can be played
+                actions.append(Action(draw=self.state.cnt_to_draw))
+            return actions
+
+        # Normal play: check each card if it can be played
         for card in current_player.list_card:
             if self._is_valid_play(card, current_card):
                 can_play = True
-                if card.symbol == 'wild':
+                # For regular cards (including SKIP, REVERSE)
+                if card.symbol not in ['wild', 'wilddraw4', 'draw2']:
+                    # Add both UNO and non-UNO versions if this would be the last card
+                    if len(current_player.list_card) == 2:
+                        actions.append(Action(card=card, color=card.color, uno=True))
+                        actions.append(Action(card=card, color=card.color, uno=False))
+                    else:
+                        actions.append(Action(card=card, color=card.color))
+                # For WILD cards
+                elif card.symbol == 'wild':
                     for color in ['red', 'green', 'yellow', 'blue']:
-                        actions.append(Action(card=card, color=color))
-                elif card.symbol == 'wilddraw4':
+                        if len(current_player.list_card) == 2:
+                            actions.append(Action(card=card, color=color, uno=True))
+                            actions.append(Action(card=card, color=color, uno=False))
+                        else:
+                            actions.append(Action(card=card, color=color))
+                # For WILD DRAW 4 cards (can only be played if no matching color)
+                elif card.symbol == 'wilddraw4' and not any(c.color == self.state.color for c in current_player.list_card if c != card):
                     for color in ['red', 'green', 'yellow', 'blue']:
-                        actions.append(Action(card=card, color=color, draw=4 + self.state.cnt_to_draw))
+                        if len(current_player.list_card) == 2:
+                            actions.append(Action(card=card, color=color, draw=4, uno=True))
+                            actions.append(Action(card=card, color=color, draw=4, uno=False))
+                        else:
+                            actions.append(Action(card=card, color=color, draw=4))
+                # For DRAW 2 cards
                 elif card.symbol == 'draw2':
-                    actions.append(Action(card=card, uno=False, color=card.color, draw=2 + self.state.cnt_to_draw))
-                elif card.symbol == 'skip':
-                    if self._is_valid_play(card, current_card):
-                        actions.append(Action(card=card, uno=False, color=card.color))
-                else:
-                    actions.append(Action(card=card, uno=False, color=card.color))
-        if can_play and current_card.symbol not in ['draw2','wilddraw4']:
+                    if len(current_player.list_card) == 2:
+                        actions.append(Action(card=card, color=card.color, draw=2, uno=True))
+                        actions.append(Action(card=card, color=card.color, draw=2, uno=False))
+                    else:
+                        actions.append(Action(card=card, color=card.color, draw=2))
+
+        # Add draw action if player hasn't drawn yet and there's no cnt_to_draw
+        if not self.state.has_drawn and self.state.cnt_to_draw == 0:
             actions.append(Action(draw=1))
-        elif not can_play and current_card.symbol == 'draw2':
-            return [Action(draw=2)]
-        elif not can_play and current_card.symbol == 'wilddraw4':
-            return [Action(draw=4)]
-        elif len(actions) == 0:
-            return [Action(draw=1)]
-
-
-
-        # # If player hasn't drawn and there are cards to draw
-        # if not self.state.has_drawn and self.state.cnt_to_draw > 0:
-        #     return [Action(draw=self.state.cnt_to_draw)]
-
-
-        # Add UNO announcement possibility if player will have one card left
-        if len(current_player.list_card) == 2:
-            for action in actions:
-                if action.card:  # Only for play actions, not draw actions
-                    action.uno = True
 
         return actions
 
