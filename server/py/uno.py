@@ -287,6 +287,12 @@ class Uno(Game):
             if i != idx_player:
                 player.list_card = [Card(color=None, number=None, symbol=None)] * len(player.list_card)
 
+        # Hide draw pile
+        if masked_state.list_card_draw:
+            masked_state.list_card_draw = [Card(color=None, number=None, symbol=None)] * len(
+                masked_state.list_card_draw)
+
+        return masked_state
 
 class RandomPlayer(Player):
 
