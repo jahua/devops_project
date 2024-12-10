@@ -17,6 +17,10 @@ class Action(BaseModel):
     draw: Optional[int] = None   # the number of cards to draw for the next player
     uno: bool = False            # true to announce "UNO" with the second last card
 
+    def __lt__(self, other):
+        # Define a way to compare Actions, for example, by their name or some other attribute
+        return str(self) < str(other)
+
 
 class PlayerState(BaseModel):
     name: Optional[str] = None  # name of player
