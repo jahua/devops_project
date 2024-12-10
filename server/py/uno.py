@@ -338,5 +338,31 @@ class RandomPlayer(Player):
 if __name__ == '__main__':
 
     uno = Uno()
-    state = GameState(cnt_player=3, idx_player_active=0, phase=GamePhase.SETUP)
-    uno.set_state(state)
+    # Initialize the game state
+    state = uno.get_state()
+    # state.cnt_player = 3
+    # uno.set_state(state)
+
+    # Create players
+    players = [RandomPlayer() for _ in range(state.cnt_player)]
+
+    # Main game loop
+    while uno.get_state().phase == GamePhase.RUNNING:
+        current_state = uno.get_state()
+        current_player_idx = current_state.idx_player_active
+
+        # Get player view and possible actions
+        player_view = uno.get_player_view(current_player_idx)
+        actions = uno.get_list_action()
+
+        # Get player's action
+        action = players[current_player_idx].select_action(player_view, actions)
+        # Apply the action
+        uno.apply_action(action)
+        # Print game state
+        uno.print_state()
+
+    # Game over
+    final_state = uno.get_state()
+    winner = final_state.idx_player_active
+    print(f"\nGame Over! Player {winner} wins!")
