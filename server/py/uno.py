@@ -152,6 +152,23 @@ class Uno(Game):
             print(f"\nPlayer {idx}: {player.name}")
             print(f"Cards: {player.list_card}")
 
+    def _is_valid_play(self, card: Card, current_card: Card) -> bool:
+        """Check if a card can be played on top of the current card"""
+        # Wild cards can always be played
+        if card.symbol in ['wild', 'wilddraw4']:
+            return True
+
+        # Match color
+        if card.color == self.state.color:
+            return True
+
+        # Match number or symbol
+        if current_card.number is not None and card.number == current_card.number:
+            return True
+        if current_card.symbol is not None and card.symbol == current_card.symbol:
+            return True
+
+        return False
 
     def get_list_action(self) -> List[Action]:
         """Get a list of possible actions for the active player"""
