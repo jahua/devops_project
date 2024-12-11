@@ -298,7 +298,7 @@ class Uno(Game):
         # Normal play: check each card if it can be played
         for card in current_player.list_card:
             if self._is_valid_play(card, current_card):
-                # For regular cards and special cards (except WILD and DRAW2)
+                # For regular cards and special cards (including SKIP and REVERSE)
                 if card.symbol not in ["wild", "wilddraw4", "draw2"]:
                     if len(current_player.list_card) == 2:
                         actions.append(Action(card=card, color=card.color, uno=True))
@@ -330,8 +330,8 @@ class Uno(Game):
                         else:
                             actions.append(Action(card=card, color=color, draw=4))
                 # For DRAW 2 cards
-                elif card.symbol == "draw2" and self._is_valid_play(card, current_card):
-                    draw_value = self.state.cnt_to_draw + 2 if self.state.cnt_to_draw > 0 else 2
+                elif card.symbol == "draw2":
+                    draw_value = self.state.cnt_to_draw + 2
                     if len(current_player.list_card) == 2:
                         actions.append(
                             Action(card=card, color=card.color, draw=draw_value, uno=True)
@@ -342,7 +342,7 @@ class Uno(Game):
                     else:
                         actions.append(Action(card=card, color=card.color, draw=draw_value))
 
-        # Add draw action if player hasn't drawn yet and there's no cnt_to_draw
+        # Add draw action if player hasn't drawn yet
         if not self.state.has_drawn:
             actions.append(Action(draw=1))
 
