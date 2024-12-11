@@ -160,8 +160,8 @@ class GameState(BaseModel):
         Card(color="any", symbol="wilddraw4"),
     ]
 
-    list_card_draw: Optional[List[Card]] = []
-    list_card_discard: Optional[List[Card]] = []
+    list_card_draw: List[Card] = []
+    list_card_discard: List[Card] = []
     list_player: List[PlayerState] = []
     phase: GamePhase = GamePhase.SETUP
     cnt_player: int = 2
@@ -264,16 +264,24 @@ class Uno(Game):
 
             # If cnt_to_draw == 2 and top card is draw2, we can stack another draw2 if available
             if self.state.cnt_to_draw == 2 and current_card.symbol == "draw2":
-                draw2_cards = [c for c in current_player.list_card if c.symbol == "draw2"]
+                draw2_cards = [
+                    c for c in current_player.list_card if c.symbol == "draw2"
+                ]
                 if draw2_cards:
                     # If we can stack another draw2, show ONLY the stacking actions (no normal draw)
                     stack_actions = []
                     for card in draw2_cards:
                         if len(current_player.list_card) == 2:
-                            stack_actions.append(Action(card=card, color=card.color, draw=4, uno=True))
-                            stack_actions.append(Action(card=card, color=card.color, draw=4, uno=False))
+                            stack_actions.append(
+                                Action(card=card, color=card.color, draw=4, uno=True)
+                            )
+                            stack_actions.append(
+                                Action(card=card, color=card.color, draw=4, uno=False)
+                            )
                         else:
-                            stack_actions.append(Action(card=card, color=card.color, draw=4))
+                            stack_actions.append(
+                                Action(card=card, color=card.color, draw=4)
+                            )
                     return stack_actions
                 else:
                     # No stack possible, must just draw the 2 cards
@@ -311,30 +319,52 @@ class Uno(Game):
                 playable_found = True
             elif card.symbol == "wilddraw4":
                 # Can only play if no matching color card in hand
-                if not any(c.color == self.state.color for c in current_player.list_card if c != card and c.color != 'any'):
+                if not any(
+                    c.color == self.state.color
+                    for c in current_player.list_card
+                    if c != card and c.color != "any"
+                ):
                     for col in ["red", "green", "yellow", "blue"]:
                         if len(current_player.list_card) == 2:
-                            actions.append(Action(card=card, color=col, draw=4, uno=True))
-                            actions.append(Action(card=card, color=col, draw=4, uno=False))
+                            actions.append(
+                                Action(card=card, color=col, draw=4, uno=True)
+                            )
+                            actions.append(
+                                Action(card=card, color=col, draw=4, uno=False)
+                            )
                         else:
                             actions.append(Action(card=card, color=col, draw=4))
                     playable_found = True
             else:
                 # Match by color, number, or symbol
-                if (card.color == self.state.color or
-                    (card.symbol and card.symbol == current_card.symbol) or
-                    (card.number is not None and current_card.number is not None and card.number == current_card.number)):
+                if (
+                    card.color == self.state.color
+                    or (card.symbol and card.symbol == current_card.symbol)
+                    or (
+                        card.number is not None
+                        and current_card.number is not None
+                        and card.number == current_card.number
+                    )
+                ):
                     if card.symbol == "draw2":
                         # normal draw2 when cnt_to_draw=0
                         if len(current_player.list_card) == 2:
-                            actions.append(Action(card=card, color=card.color, draw=2, uno=True))
-                            actions.append(Action(card=card, color=card.color, draw=2, uno=False))
+                            actions.append(
+                                Action(card=card, color=card.color, draw=2, uno=True)
+                            )
+                            actions.append(
+                                Action(card=card, color=card.color, draw=2, uno=False)
+                            )
                         else:
                             actions.append(Action(card=card, color=card.color, draw=2))
                     else:
                         if len(current_player.list_card) == 2:
-                            actions.append(Action(card=card, color=card.color, uno=True))
-                            actions.append(Action(card=card, color=card.color, uno=False))
+                            actions.append(
+                                Action(card=card, color=card.color, uno=True)
+                            )
+                            actions.append(
+                                Action(card=card, color=card.color, uno=False)
+                            )
                         else:
                             actions.append(Action(card=card, color=card.color))
                     playable_found = True
