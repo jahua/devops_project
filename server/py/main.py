@@ -213,9 +213,34 @@ async def uno_simulation(request: Request):
 async def uno_simulation_ws(websocket: WebSocket):
     await websocket.accept()
 
-    try:
+    idx_player_you = 0
 
-        pass
+    try:
+        game = uno.Uno()
+        players = [uno.RandomPlayer() for _ in range(game.get_state().cnt_player)]
+
+        while True:
+            state = game.get_state()
+            list_action = game.get_list_action()
+            action = None
+            if len(list_action) > 0:
+                action = players[state.idx_player_active].select_action(state, list_action)
+
+            dict_state = state.model_dump()
+            dict_state['idx_player_you'] = idx_player_you
+            dict_state['list_action'] = []
+            dict_state['selected_action'] = None if action is None else action.model_dump()
+            data = {'type': 'update', 'state': dict_state}
+            await websocket.send_json(data)
+
+            if state.phase == uno.GamePhase.FINISHED:
+                break
+
+            data = await websocket.receive_json()
+
+            if data['type'] == 'action':
+                action = uno.Action.model_validate(data['action'])
+                game.apply_action(action)
 
     except WebSocketDisconnect:
         print('DISCONNECTED')
@@ -230,9 +255,51 @@ async def uno_singleplayer(request: Request):
 async def uno_singleplayer_ws(websocket: WebSocket):
     await websocket.accept()
 
-    try:
+    idx_player_you = 0
 
-        pass
+    try:
+        game = uno.Uno()
+        players = [uno.RandomPlayer() for _ in range(game.get_state().cnt_player - 1)]  # One less AI player
+
+        while True:
+            state = game.get_state()
+            if state.phase == uno.GamePhase.FINISHED:
+                break
+
+            if state.idx_player_active == idx_player_you:
+                # Human player's turn
+                state = game.get_player_view(idx_player_you)
+                list_action = game.get_list_action()
+                dict_state = state.model_dump()
+                dict_state['idx_player_you'] = idx_player_you
+                dict_state['list_action'] = [action.model_dump() for action in list_action]
+                data = {'type': 'update', 'state': dict_state}
+                await websocket.send_json(data)
+
+                if len(list_action) == 0:
+                    game.apply_action(None)
+                else:
+                    data = await websocket.receive_json()
+                    if data['type'] == 'action':
+                        action = uno.Action.model_validate(data['action'])
+                        game.apply_action(action)
+
+            else:
+                # AI players' turns
+                state = game.get_player_view(state.idx_player_active)
+                list_action = game.get_list_action()
+                ai_player_idx = state.idx_player_active - 1 if state.idx_player_active > 0 else 0
+                action = players[ai_player_idx].select_action(state, list_action)
+                await asyncio.sleep(1)
+                game.apply_action(action)
+
+                # Update human player view
+                state = game.get_player_view(idx_player_you)
+                dict_state = state.model_dump()
+                dict_state['idx_player_you'] = idx_player_you
+                dict_state['list_action'] = []
+                data = {'type': 'update', 'state': dict_state}
+                await websocket.send_json(data)
 
     except WebSocketDisconnect:
         print('DISCONNECTED')
@@ -243,8 +310,19 @@ async def uno_random_player_ws(websocket: WebSocket):
     await websocket.accept()
 
     try:
-
-        pass
+        player = uno.RandomPlayer()
+        
+        while True:
+            data = await websocket.receive_json()
+            if data['type'] == 'request_action':
+                state = uno.GameState.model_validate(data['state'])
+                actions = [uno.Action.model_validate(action) for action in data['actions']]
+                action = player.select_action(state, actions)
+                response = {
+                    'type': 'action',
+                    'action': None if action is None else action.model_dump()
+                }
+                await websocket.send_json(response)
 
     except WebSocketDisconnect:
         print('DISCONNECTED')
