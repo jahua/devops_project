@@ -257,25 +257,17 @@ class Uno(Game):
         if card.symbol in ["wild", "wilddraw4"]:
             return True
 
-        # Match by color with current game color (not the card's color)
+        # Match by color
         if card.color == self.state.color:
             return True
 
-        # Match by number
-        if (
-            card.number is not None
-            and current_card.number is not None
-            and card.number == current_card.number
-        ):
+        # Match by symbol (including SKIP, REVERSE, and DRAW2)
+        if card.symbol and card.symbol == current_card.symbol:
             return True
 
-        # Match by symbol (for special cards like SKIP, REVERSE, DRAW2)
-        if (
-            card.symbol is not None
-            and current_card.symbol is not None
-            and card.symbol == current_card.symbol
-        ):
-            return True
+        # Match by number
+        if card.number is not None and current_card.number is not None:
+            return card.number == current_card.number
 
         return False
 
@@ -287,7 +279,11 @@ class Uno(Game):
         actions: List[Action] = []
         current_player = self.state.list_player[self.state.idx_player_active]
         current_card = self.state.list_card_discard[-1]
-        can_play = False
+
+        # If player must draw cards, they can only draw
+        if self.state.cnt_to_draw > 0:
+            actions.append(Action(draw=self.state.cnt_to_draw))
+            return actions
 
         # Special case: if first card on discard pile is WILD, player can play any card
         if current_card.symbol == "wild" and len(self.state.list_card_discard) == 1:
@@ -299,76 +295,11 @@ class Uno(Game):
                     actions.append(Action(card=card, color=card.color))
             return actions
 
-        # If previous card is DRAW2 or WILDDRAW4 and cnt_to_draw > 0, player must draw unless they can play another draw card
-        if self.state.cnt_to_draw > 0:
-            if current_card.symbol == "draw2":
-                for card in current_player.list_card:
-                    if card.symbol == "draw2":
-                        if len(current_player.list_card) == 2:
-                            actions.append(
-                                Action(
-                                    card=card,
-                                    color=card.color,
-                                    draw=2 + self.state.cnt_to_draw,
-                                    uno=True,
-                                )
-                            )
-                            actions.append(
-                                Action(
-                                    card=card,
-                                    color=card.color,
-                                    draw=2 + self.state.cnt_to_draw,
-                                    uno=False,
-                                )
-                            )
-                        else:
-                            actions.append(
-                                Action(
-                                    card=card,
-                                    color=card.color,
-                                    draw=2 + self.state.cnt_to_draw,
-                                )
-                            )
-            elif current_card.symbol == "wilddraw4":
-                for card in current_player.list_card:
-                    if card.symbol == "wilddraw4":
-                        for color in ["red", "green", "yellow", "blue"]:
-                            if len(current_player.list_card) == 2:
-                                actions.append(
-                                    Action(
-                                        card=card,
-                                        color=color,
-                                        draw=4 + self.state.cnt_to_draw,
-                                        uno=True,
-                                    )
-                                )
-                                actions.append(
-                                    Action(
-                                        card=card,
-                                        color=color,
-                                        draw=4 + self.state.cnt_to_draw,
-                                        uno=False,
-                                    )
-                                )
-                            else:
-                                actions.append(
-                                    Action(
-                                        card=card,
-                                        color=color,
-                                        draw=4 + self.state.cnt_to_draw,
-                                    )
-                                )
-            if not actions:  # If no matching draw card can be played
-                actions.append(Action(draw=self.state.cnt_to_draw))
-            return actions
-
         # Normal play: check each card if it can be played
         for card in current_player.list_card:
             if self._is_valid_play(card, current_card):
-                can_play = True
-                # For regular cards (including SKIP, REVERSE)
+                # For regular cards (including SKIP and REVERSE)
                 if card.symbol not in ["wild", "wilddraw4", "draw2"]:
-                    # Add both UNO and non-UNO versions if this would be the last card
                     if len(current_player.list_card) == 2:
                         actions.append(Action(card=card, color=card.color, uno=True))
                         actions.append(Action(card=card, color=card.color, uno=False))
@@ -399,7 +330,7 @@ class Uno(Game):
                         else:
                             actions.append(Action(card=card, color=color, draw=4))
                 # For DRAW 2 cards
-                elif card.symbol == "draw2":
+                elif card.symbol == "draw2" and self.state.cnt_to_draw == 0:
                     if len(current_player.list_card) == 2:
                         actions.append(
                             Action(card=card, color=card.color, draw=2, uno=True)
