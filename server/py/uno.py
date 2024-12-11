@@ -12,10 +12,12 @@ from typing import List, Optional
 from pydantic import BaseModel
 from server.py.game import Game, Player
 
+
 class Card(BaseModel):
     color: Optional[str] = None
     number: Optional[int] = None
     symbol: Optional[str] = None
+
 
 class Action(BaseModel):
     card: Optional[Card] = None
@@ -26,14 +28,17 @@ class Action(BaseModel):
     def __lt__(self, other):
         return str(self) < str(other)
 
+
 class PlayerState(BaseModel):
     name: Optional[str] = None
     list_card: List[Card] = []
+
 
 class GamePhase(str, Enum):
     SETUP = "setup"
     RUNNING = "running"
     FINISHED = "finished"
+
 
 class GameState(BaseModel):
     CNT_HAND_CARDS: int = 7
@@ -166,9 +171,12 @@ class GameState(BaseModel):
     cnt_to_draw: int = 0
     has_drawn: bool = False
 
+
 class Uno(Game):
     def __init__(self) -> None:
-        state = GameState(cnt_player=3, phase=GamePhase.SETUP, direction=1, idx_player_active=0)
+        state = GameState(
+            cnt_player=3, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+        )
         self.set_state(state)
 
     def set_state(self, state: GameState) -> None:
@@ -187,7 +195,11 @@ class Uno(Game):
 
             if len(self.state.list_card_discard) == 0:
                 initial_card = self.state.list_card_draw.pop()
-                while initial_card.symbol == "wilddraw4" and len(self.state.list_card_discard) == 0:
+                # Ensure first card is not wilddraw4
+                while (
+                    initial_card.symbol == "wilddraw4"
+                    and len(self.state.list_card_discard) == 0
+                ):
                     self.state.list_card_draw.append(initial_card)
                     random.shuffle(self.state.list_card_draw)
                     initial_card = self.state.list_card_draw.pop()
@@ -204,7 +216,9 @@ class Uno(Game):
                 if initial_card.symbol == "reverse":
                     self.state.direction *= -1
                 elif initial_card.symbol == "skip":
-                    self.state.idx_player_active = (self.state.idx_player_active + 1) % self.state.cnt_player
+                    self.state.idx_player_active = (
+                        self.state.idx_player_active + 1
+                    ) % self.state.cnt_player
                 elif initial_card.symbol == "draw2":
                     self.state.cnt_to_draw += 2
             else:
@@ -237,52 +251,54 @@ class Uno(Game):
     def get_list_action(self) -> List[Action]:
         if self.state.phase != GamePhase.RUNNING:
             return []
+
         actions: List[Action] = []
         current_player = self.state.list_player[self.state.idx_player_active]
         current_card = self.state.list_card_discard[-1]
 
-        # Handle first WILD card scenario (Test 010 fix)
+        # If we have any pending draws (cnt_to_draw > 0), handle those scenarios first
+        if self.state.cnt_to_draw > 0:
+            # If cnt_to_draw > 2, must only draw the accumulated cards (e.g. 4)
+            if self.state.cnt_to_draw > 2:
+                return [Action(draw=self.state.cnt_to_draw)]
+
+            # If cnt_to_draw == 2 and top card is draw2, we can stack another draw2 if available
+            if self.state.cnt_to_draw == 2 and current_card.symbol == "draw2":
+                draw2_cards = [c for c in current_player.list_card if c.symbol == "draw2"]
+                if draw2_cards:
+                    # If we can stack another draw2, show ONLY the stacking actions (no normal draw)
+                    stack_actions = []
+                    for card in draw2_cards:
+                        if len(current_player.list_card) == 2:
+                            stack_actions.append(Action(card=card, color=card.color, draw=4, uno=True))
+                            stack_actions.append(Action(card=card, color=card.color, draw=4, uno=False))
+                        else:
+                            stack_actions.append(Action(card=card, color=card.color, draw=4))
+                    return stack_actions
+                else:
+                    # No stack possible, must just draw the 2 cards
+                    return [Action(draw=self.state.cnt_to_draw)]
+
+            # If cnt_to_draw > 0 but not equal to 2 scenario (like cnt_to_draw=1 or another unusual case)
+            # Just return the forced draw action
+            return [Action(draw=self.state.cnt_to_draw)]
+
+        # If we reach here, cnt_to_draw == 0, proceed with normal logic
+        # Special case: if first card is wild and only one card on discard
         if current_card.symbol == "wild" and len(self.state.list_card_discard) == 1:
             playable_found = False
             for card in current_player.list_card:
-                # Any card can be played after a WILD first card
                 if len(current_player.list_card) == 2:
                     actions.append(Action(card=card, color=card.color, uno=True))
                     actions.append(Action(card=card, color=card.color, uno=False))
                 else:
                     actions.append(Action(card=card, color=card.color))
                 playable_found = True
-            # Only add draw if no playable card was found
             if not playable_found and not self.state.has_drawn:
                 actions.append(Action(draw=1))
             return actions
 
-        # Handle draw2 stacking (Test 013 fix)
-        if current_card.symbol == "draw2" and self.state.cnt_to_draw > 0:
-            if self.state.cnt_to_draw == 2:
-                # Only allow stacking on the first draw2
-                draw2_cards = [c for c in current_player.list_card if c.symbol == "draw2"]
-                if draw2_cards:
-                    for card in draw2_cards:
-                        if len(current_player.list_card) == 2:
-                            actions.append(Action(card=card, color=card.color, draw=self.state.cnt_to_draw + 2, uno=True))
-                            actions.append(Action(card=card, color=card.color, draw=self.state.cnt_to_draw + 2, uno=False))
-                        else:
-                            actions.append(Action(card=card, color=card.color, draw=self.state.cnt_to_draw + 2))
-                else:
-                    # No stack possible, must draw
-                    actions.append(Action(draw=self.state.cnt_to_draw))
-            else:
-                # cnt_to_draw > 2 means already stacked, must now draw
-                actions.append(Action(draw=self.state.cnt_to_draw))
-            return actions
-
-        # If cnt_to_draw > 0 and not in a stacking scenario
-        if self.state.cnt_to_draw > 0:
-            actions.append(Action(draw=self.state.cnt_to_draw))
-            return actions
-
-        # Normal play
+        # Normal matching scenario
         playable_found = False
         for card in current_player.list_card:
             if card.symbol == "wild":
@@ -294,6 +310,7 @@ class Uno(Game):
                         actions.append(Action(card=card, color=col))
                 playable_found = True
             elif card.symbol == "wilddraw4":
+                # Can only play if no matching color card in hand
                 if not any(c.color == self.state.color for c in current_player.list_card if c != card and c.color != 'any'):
                     for col in ["red", "green", "yellow", "blue"]:
                         if len(current_player.list_card) == 2:
@@ -303,11 +320,12 @@ class Uno(Game):
                             actions.append(Action(card=card, color=col, draw=4))
                     playable_found = True
             else:
-                # match by color, number or symbol
+                # Match by color, number, or symbol
                 if (card.color == self.state.color or
-                    (card.symbol is not None and card.symbol == current_card.symbol) or
+                    (card.symbol and card.symbol == current_card.symbol) or
                     (card.number is not None and current_card.number is not None and card.number == current_card.number)):
                     if card.symbol == "draw2":
+                        # normal draw2 when cnt_to_draw=0
                         if len(current_player.list_card) == 2:
                             actions.append(Action(card=card, color=card.color, draw=2, uno=True))
                             actions.append(Action(card=card, color=card.color, draw=2, uno=False))
@@ -321,7 +339,6 @@ class Uno(Game):
                             actions.append(Action(card=card, color=card.color))
                     playable_found = True
 
-        # Only add draw action if player hasn't drawn yet and no forced scenario
         if not self.state.has_drawn:
             actions.append(Action(draw=1))
 
@@ -334,7 +351,9 @@ class Uno(Game):
         current_player = self.state.list_player[self.state.idx_player_active]
 
         def move_to_next_player():
-            self.state.idx_player_active = (self.state.idx_player_active + self.state.direction) % self.state.cnt_player
+            self.state.idx_player_active = (
+                self.state.idx_player_active + self.state.direction
+            ) % self.state.cnt_player
             self.state.has_drawn = False
 
         if action and action.draw:
@@ -362,7 +381,9 @@ class Uno(Game):
             if action.card.symbol == "reverse":
                 self.state.direction *= -1
             elif action.card.symbol == "skip":
-                self.state.idx_player_active = (self.state.idx_player_active + 2 * self.state.direction) % self.state.cnt_player
+                self.state.idx_player_active = (
+                    self.state.idx_player_active + 2 * self.state.direction
+                ) % self.state.cnt_player
                 if len(current_player.list_card) == 0:
                     self.state.phase = GamePhase.FINISHED
                 return
@@ -386,16 +407,24 @@ class Uno(Game):
         masked_state = self.state.model_copy(deep=True)
         for i, player in enumerate(masked_state.list_player):
             if i != idx_player:
-                player.list_card = [Card(color=None, number=None, symbol=None)] * len(player.list_card)
+                player.list_card = [Card(color=None, number=None, symbol=None)] * len(
+                    player.list_card
+                )
         if masked_state.list_card_draw:
-            masked_state.list_card_draw = [Card(color=None, number=None, symbol=None)] * len(masked_state.list_card_draw)
+            masked_state.list_card_draw = [
+                Card(color=None, number=None, symbol=None)
+            ] * len(masked_state.list_card_draw)
         return masked_state
 
+
 class RandomPlayer(Player):
-    def select_action(self, state: GameState, actions: List[Action]) -> Optional[Action]:
+    def select_action(
+        self, state: GameState, actions: List[Action]
+    ) -> Optional[Action]:
         if actions:
             return random.choice(actions)
         return None
+
 
 if __name__ == "__main__":
     uno = Uno()
