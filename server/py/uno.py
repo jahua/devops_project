@@ -18,6 +18,16 @@ class Card(BaseModel):
     number: Optional[int] = None
     symbol: Optional[str] = None
 
+    def __str__(self) -> None:
+        s = self.color[0].upper()
+        if self.symbol is None:
+            s += f'{self.number}'
+        else:
+            s += self.symbol.upper()
+            if self.number is not None:
+                s += f' {self.number}'
+        return s
+
 
 class Action(BaseModel):
     card: Optional[Card] = None
@@ -27,6 +37,24 @@ class Action(BaseModel):
 
     def __lt__(self, other):
         return str(self) < str(other)
+
+    def __str__(self) -> None:
+        s = ''
+        if self.card is not None:
+            s += f'{self.card}'
+        if self.color is not None and self.card is not None and self.card.symbol is not None:
+            if len(s) > 0:
+                s += ' '
+            s += ' ' + self.color[0].upper()
+        if self.draw is not None:
+            if len(s) > 0:
+                s += ' '
+            s += f'+{self.draw}'
+        if self.uno:
+            if len(s) > 0:
+                s += ' '
+            s += f'UNO'
+        return s
 
 
 class PlayerState(BaseModel):
@@ -171,13 +199,38 @@ class GameState(BaseModel):
     cnt_to_draw: int = 0
     has_drawn: bool = False
 
+    def __str__(self):
+        s = '  - Last Card: '
+        s += self.color[0].upper()
+        if self.list_card_discard is None:
+            s += 'None'
+        else:
+            card = self.list_card_discard[-1]
+            if card.symbol is None:
+                s += f'{card.number}'
+            else:
+                s += card.symbol.upper()
+                if card.number is not None:
+                    s += f' {card.number}'
+        s += '\n'
+        s += f'  - Color: {self.color}\n'
+        s += f'  - Cnt To Draw: {self.cnt_to_draw}\n'
+        s += f'  - Has Drawn: {self.has_drawn}\n'
+        s += f'  - Direction: {self.direction}\n'
+        s += f'  - Phase: {self.phase}\n'
+        for i, player in enumerate(self.list_player):
+            s += '    '
+            s += '> ' if i == self.idx_player_active else '  '
+            s += f'{player.name} ({len(player.list_card)}): '
+            s += ", ".join([str(card) for card in player.list_card]) + '\n'
+        return s[:-1]
 
 class Uno(Game):
-    def __init__(self) -> None:
-        state = GameState(
-            cnt_player=3, phase=GamePhase.SETUP, direction=1, idx_player_active=0
-        )
-        self.set_state(state)
+    #def __init__(self) -> None:
+    #    state = GameState(
+    #        cnt_player=3, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    #    )
+    #    self.set_state(state)
 
     def set_state(self, state: GameState) -> None:
         self.state = state
@@ -193,17 +246,8 @@ class Uno(Game):
             if len(self.state.list_card_draw) == 0:
                 return
 
-            if len(self.state.list_card_discard) == 0:
-                initial_card = self.state.list_card_draw.pop()
-                # Ensure first card is not wilddraw4
-                while (
-                    initial_card.symbol == "wilddraw4"
-                    and len(self.state.list_card_discard) == 0
-                ):
-                    self.state.list_card_draw.append(initial_card)
-                    random.shuffle(self.state.list_card_draw)
-                    initial_card = self.state.list_card_draw.pop()
-
+            # deal cards
+            if len(self.state.list_player) < self.state.cnt_player:
                 for p in range(self.state.cnt_player):
                     player = PlayerState(name=f"Player{p}")
                     for _ in range(self.state.CNT_HAND_CARDS):
@@ -211,26 +255,30 @@ class Uno(Game):
                             player.list_card.append(self.state.list_card_draw.pop())
                     self.state.list_player.append(player)
 
-                self.state.list_card_discard = [initial_card]
-                self.state.color = initial_card.color
-                if initial_card.symbol == "reverse":
-                    self.state.direction *= -1
-                elif initial_card.symbol == "skip":
-                    self.state.idx_player_active = (
-                        self.state.idx_player_active + 1
-                    ) % self.state.cnt_player
-                elif initial_card.symbol == "draw2":
-                    self.state.cnt_to_draw += 2
-            else:
-                if len(self.state.list_player) < self.state.cnt_player:
-                    for p in range(self.state.cnt_player):
-                        player = PlayerState(name=f"Player{p}")
-                        for _ in range(self.state.CNT_HAND_CARDS):
-                            if len(self.state.list_card_draw) > 0:
-                                player.list_card.append(self.state.list_card_draw.pop())
-                        self.state.list_player.append(player)
-                initial_card = self.state.list_card_discard[-1]
-                self.state.color = initial_card.color
+            # add first card to discard pile
+            initial_card = self.state.list_card_draw.pop()
+            # Ensure first card is not wilddraw4
+            while (
+                initial_card.symbol == "wilddraw4"
+                and len(self.state.list_card_discard) == 0
+            ):
+                self.state.list_card_draw.append(initial_card)
+                random.shuffle(self.state.list_card_draw)
+                initial_card = self.state.list_card_draw.pop()
+
+            self.state.list_card_discard = [initial_card]
+            self.state.color = initial_card.color
+            if initial_card.symbol == "reverse":
+                self.state.direction *= -1
+            elif initial_card.symbol == "skip":
+                self.state.idx_player_active = (
+                    self.state.idx_player_active + 1
+                ) % self.state.cnt_player
+            elif initial_card.symbol == "draw2":
+                self.state.cnt_to_draw += 2
+
+            initial_card = self.state.list_card_discard[-1]
+            self.state.color = initial_card.color
 
             self.state.phase = GamePhase.RUNNING
 
@@ -238,6 +286,7 @@ class Uno(Game):
         return self.state
 
     def print_state(self) -> None:
+        print('----------------')
         print(f"Phase: {self.state.phase}")
         print(f"Active Player: {self.state.idx_player_active}")
         print(f"Direction: {'Left' if self.state.direction == 1 else 'Right'}")
@@ -269,6 +318,7 @@ class Uno(Game):
 
             # If cnt_to_draw == 2 and top card is draw2, we can stack another draw2 if available
             if self.state.cnt_to_draw == 2 and current_card.symbol == "draw2":
+
                 draw2_cards = [
                     c for c in current_player.list_card if c.symbol == "draw2"
                 ]
@@ -463,7 +513,10 @@ class RandomPlayer(Player):
 
 if __name__ == "__main__":
     uno = Uno()
-    state = uno.get_state()
+    state = GameState(
+        cnt_player=3, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    uno.set_state(state)
     players = [RandomPlayer() for _ in range(state.cnt_player)]
 
     while uno.get_state().phase == GamePhase.RUNNING:
