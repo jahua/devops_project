@@ -363,7 +363,7 @@ class Uno(Game):
                 else:
                     actions.append(Action(card=card, color=card.color))
                 playable_found = True
-            if not playable_found and not self.state.has_drawn:
+            if not self.state.has_drawn:
                 actions.append(Action(draw=1))
             return actions
 

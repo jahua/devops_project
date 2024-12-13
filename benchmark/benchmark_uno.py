@@ -446,6 +446,8 @@ class UnoBenchmark(benchmark.Benchmark):
         list_action_expected = []
         action = Action(card=card, color=card.color, draw=None)
         list_action_expected.append(action)
+        action = Action(card=None, color=None, draw=1)
+        list_action_expected.append(action)
 
         hint = str_state
         hint += 'Error: "get_list_action" result is wrong.\n'
@@ -590,7 +592,7 @@ class UnoBenchmark(benchmark.Benchmark):
                 list_card_draw.append(card)
 
         card = Card(color='green', number=None, symbol='draw2')
-        idx_top = self.get_idx_top(list_card_draw, cnt_player) 
+        idx_top = self.get_idx_top(list_card_draw, cnt_player)
         list_card_draw[idx_top] = card
 
         state = GameState(
@@ -613,6 +615,9 @@ class UnoBenchmark(benchmark.Benchmark):
         list_action_expected = []
         action = Action(card=card, color=card.color, draw=4)
         list_action_expected.append(action)
+        draw = state.cnt_to_draw if state.cnt_to_draw > 0 else 1
+        action2 = Action(card=None, color=None, draw=draw)
+        list_action_expected.append(action2)
 
         hint = str_state_1
         hint += 'Error 1: "get_list_action" result is wrong.\n'
@@ -950,4 +955,4 @@ if __name__ == '__main__':
         benchmark.run_tests()
 
     else:  # Run specific test(s)
-        benchmark.test_list_action_card_matching_2()
+        benchmark.test_draw_two_2()
