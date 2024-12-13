@@ -212,13 +212,15 @@ class UnoBenchmark(benchmark.Benchmark):
                 draw = state.cnt_to_draw + 2 if card1.symbol == 'draw2' else None
                 action = Action(card=card1, color=card1.color, draw=draw)
                 list_action_expected.append(action)
-                #draw = state.cnt_to_draw + 2 if card2.symbol == 'draw2' else None
-                #action = Action(card=card2, color=card2.color, draw=draw)
-                #list_action_expected.append(action)
+                if state.cnt_to_draw == 0:
+                    draw = state.cnt_to_draw + 2 if card2.symbol == 'draw2' else None
+                    action = Action(card=card2, color=card2.color, draw=draw)
+                    list_action_expected.append(action)
                 draw = state.cnt_to_draw + 2 if card3.symbol == 'draw2' else None
                 action = Action(card=card3, color=card3.color, draw=draw)
                 list_action_expected.append(action)
-                action = Action(card=None, color=None, draw=1)
+                draw = state.cnt_to_draw if state.cnt_to_draw > 0 else 1
+                action = Action(card=None, color=None, draw=draw)
                 list_action_expected.append(action)
 
                 hint = str_state
@@ -944,8 +946,8 @@ if __name__ == '__main__':
 
     benchmark = UnoBenchmark(argv=sys.argv)
 
-    if False:  # Run all tests
+    if True:  # Run all tests
         benchmark.run_tests()
 
     else:  # Run specific test(s)
-        benchmark.test_draw_two_2()
+        benchmark.test_list_action_card_matching_2()

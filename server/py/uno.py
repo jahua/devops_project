@@ -303,11 +303,11 @@ class Uno(Game):
 
         actions: List[Action] = []
         current_player = self.state.list_player[self.state.idx_player_active]
-        
+
         # Add safety check for empty discard pile
         if not self.state.list_card_discard:
             return []
-            
+
         current_card = self.state.list_card_discard[-1]
 
         # If we have any pending draws (cnt_to_draw > 0), handle those scenarios first
@@ -337,6 +337,12 @@ class Uno(Game):
                             stack_actions.append(
                                 Action(card=card, color=card.color, draw=4)
                             )
+
+                    # No stacking wanted
+                    stack_actions.append(
+                        Action(draw=self.state.cnt_to_draw)
+                    )
+
                     return stack_actions
                 else:
                     # No stack possible, must just draw the 2 cards
