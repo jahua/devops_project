@@ -1,9 +1,14 @@
 import pytest
-from server.py.uno import Uno, GamePhase, Card, PlayerState, GameState
+from server.py.uno import Uno, GamePhase, Card, PlayerState, GameState, Action
+
 
 def test_initial_game_state():
     """Test 001: Validate values of initial game state (cnt_players=2)"""
     game = Uno()
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
     state = game.get_state()
     
     assert state.cnt_player == 2
@@ -19,6 +24,10 @@ def test_initial_game_state():
 def test_card_values():
     """Test 002: Validate card values"""
     game = Uno()
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
     state = game.get_state()
     
     valid_colors = ['red', 'green', 'yellow', 'blue', 'any']
@@ -35,6 +44,10 @@ def test_card_values():
 def test_card_matching_simple():
     """Test 003: Test player card matching with discard pile card - simple cards"""
     game = Uno()
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
     
     # Test matching by color
     top_card = Card(color='red', number=5, symbol=None)
@@ -48,7 +61,11 @@ def test_card_matching_simple():
 def test_card_matching_special():
     """Test 004: Test player card matching with discard pile card - special cards"""
     game = Uno()
-    
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
+
     # Test wild cards
     top_card = Card(color='red', number=5, symbol=None)
     wild_card = Card(color='any', number=None, symbol='wild')
@@ -69,6 +86,10 @@ def test_card_matching_special():
 def test_game_flow():
     """Test game flow and state transitions"""
     game = Uno()
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
     state = game.get_state()
     
     # Verify initial state
@@ -79,7 +100,9 @@ def test_game_flow():
     player = state.list_player[0]
     if len(player.list_card) > 0:
         card = player.list_card[0]
-        game.apply_action({"type": "play", "card": card})
+        action = Action(card=card, color=card.color, number=card.number)
+        game.apply_action(action)
+        # game.apply_action({"type": "play", "card": card})
         new_state = game.get_state()
         
         # Verify turn changed
@@ -88,13 +111,21 @@ def test_game_flow():
 def test_reverse_card():
     """Test the effect of reverse cards"""
     game = Uno()
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
     state = game.get_state()
     
     initial_direction = state.direction
     reverse_card = Card(color='red', number=None, symbol='reverse')
     
     # Simulate playing reverse card
-    game.apply_action({"type": "play", "card": reverse_card})
+    current_player = state.list_player[state.idx_player_active or 0]
+    current_player.list_card.append(reverse_card)
+    action = Action(card=reverse_card, color=reverse_card.color, number = reverse_card.number)
+    game.apply_action(action)
+    # game.apply_action({"type": "play", "card": reverse_card})
     new_state = game.get_state()
     
     assert new_state.direction == -initial_direction
@@ -102,13 +133,21 @@ def test_reverse_card():
 def test_skip_card():
     """Test the effect of skip cards"""
     game = Uno()
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
     state = game.get_state()
     
     initial_player = state.idx_player_active
     skip_card = Card(color='red', number=None, symbol='skip')
     
     # Simulate playing skip card
-    game.apply_action({"type": "play", "card": skip_card})
+    current_player = state.list_player[state.idx_player_active or 0]
+    current_player.list_card.append(skip_card)
+    action = Action(card=skip_card, symbol=skip_card.symbol, color=skip_card.color)
+    game.apply_action(action)
+    # game.apply_action({"type": "play", "card": skip_card})
     new_state = game.get_state()
     
     # Should skip one player
@@ -118,12 +157,18 @@ def test_skip_card():
 def test_draw_cards():
     """Test drawing cards mechanism"""
     game = Uno()
+    state = GameState(
+        cnt_player=2, phase=GamePhase.SETUP, direction=1, idx_player_active=0
+    )
+    game.set_state(state)
     state = game.get_state()
     
     initial_cards = len(state.list_player[0].list_card)
     
     # Simulate drawing a card
-    game.apply_action({"type": "draw"})
+    # game.apply_action({"type": "draw"})
+    action = Action(card=None, draw=1)
+    game.apply_action(action)
     new_state = game.get_state()
     
     assert len(new_state.list_player[0].list_card) == initial_cards + 1 
