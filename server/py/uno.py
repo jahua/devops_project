@@ -447,22 +447,6 @@ class Uno(Game):
             ) % self.state.cnt_player
             self.state.has_drawn = False
 
-        if action and action.draw:
-            cards_to_draw = action.draw
-            while cards_to_draw > 0:
-                if not self.state.list_card_draw:
-                    if len(self.state.list_card_discard) > 1:
-                        top_card = self.state.list_card_discard.pop()
-                        self.state.list_card_draw = self.state.list_card_discard
-                        self.state.list_card_discard = [top_card]
-                        random.shuffle(self.state.list_card_draw)
-                    else:
-                        break
-                current_player.list_card.append(self.state.list_card_draw.pop())
-                cards_to_draw -= 1
-            self.state.has_drawn = True
-            self.state.cnt_to_draw = 0
-            return
 
         if action and action.card:
             current_player.list_card.remove(action.card)
@@ -491,6 +475,22 @@ class Uno(Game):
                 for _ in range(4):
                     if self.state.list_card_draw:
                         current_player.list_card.append(self.state.list_card_draw.pop())
+        elif action and action.draw:
+            cards_to_draw = action.draw
+            while cards_to_draw > 0:
+                if not self.state.list_card_draw:
+                    if len(self.state.list_card_discard) > 1:
+                        top_card = self.state.list_card_discard.pop()
+                        self.state.list_card_draw = self.state.list_card_discard
+                        self.state.list_card_discard = [top_card]
+                        random.shuffle(self.state.list_card_draw)
+                    else:
+                        break
+                current_player.list_card.append(self.state.list_card_draw.pop())
+                cards_to_draw -= 1
+            self.state.has_drawn = True
+            self.state.cnt_to_draw = 0
+            if action.draw == 1: return
 
         move_to_next_player()
 
@@ -512,8 +512,14 @@ class RandomPlayer(Player):
     def select_action(
         self, state: GameState, actions: List[Action]
     ) -> Optional[Action]:
-        if actions:
-            return random.choice(actions)
+        my_actions = actions
+        if my_actions:
+            if len(my_actions) > 1:
+                for my_action in my_actions:
+                    if my_action.draw == 1:
+                        my_actions.remove(my_action)
+                        break
+            return random.choice(my_actions)
         return None
 
 
