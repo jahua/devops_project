@@ -18,8 +18,8 @@ class Card(BaseModel):
     number: Optional[int] = None
     symbol: Optional[str] = None
 
-    def __str__(self) -> None:
-        s = self.color[0].upper()
+    def __str__(self) -> str:
+        s = self.color[0].upper() if self.color else ""
         if self.symbol is None:
             s += f'{self.number}'
         else:
@@ -35,10 +35,10 @@ class Action(BaseModel):
     draw: Optional[int] = None
     uno: bool = False
 
-    def __lt__(self, other):
+    def __lt__(self, other:'Action') -> bool:
         return str(self) < str(other)
 
-    def __str__(self) -> None:
+    def __str__(self) -> str:
         s = ''
         if self.card is not None:
             s += f'{self.card}'
@@ -199,9 +199,9 @@ class GameState(BaseModel):
     cnt_to_draw: int = 0
     has_drawn: bool = False
 
-    def __str__(self):
+    def __str__(self) -> str :
         s = '  - Last Card: '
-        s += self.color[0].upper()
+        s += self.color[0].upper() if self.color else ""
         if self.list_card_discard is None:
             s += 'None'
         else:
@@ -302,7 +302,7 @@ class Uno(Game):
             return []
 
         actions: List[Action] = []
-        current_player = self.state.list_player[self.state.idx_player_active]
+        current_player = self.state.list_player[self.state.idx_player_active or 0]
 
         # Add safety check for empty discard pile
         if not self.state.list_card_discard:
@@ -435,15 +435,14 @@ class Uno(Game):
 
         return actions
 
-    def apply_action(self, action: Action) -> None:
+    def apply_action(self, action: Optional[Action]) -> None:
         if self.state.phase != GamePhase.RUNNING:
             return
 
-        current_player = self.state.list_player[self.state.idx_player_active]
+        current_player = self.state.list_player[self.state.idx_player_active or 0]
 
-        def move_to_next_player():
-            self.state.idx_player_active = (
-                self.state.idx_player_active + self.state.direction
+        def move_to_next_player() -> None :
+            self.state.idx_player_active = ((self.state.idx_player_active or 0) + self.state.direction
             ) % self.state.cnt_player
             self.state.has_drawn = False
 
@@ -456,8 +455,7 @@ class Uno(Game):
             if action.card.symbol == "reverse":
                 self.state.direction *= -1
             elif action.card.symbol == "skip":
-                self.state.idx_player_active = (
-                    self.state.idx_player_active + 2 * self.state.direction
+                self.state.idx_player_active = ((self.state.idx_player_active or 0) + 2 * self.state.direction
                 ) % self.state.cnt_player
                 if len(current_player.list_card) == 0:
                     self.state.phase = GamePhase.FINISHED
@@ -494,7 +492,7 @@ class Uno(Game):
 
         move_to_next_player()
 
-    def get_player_view(self, idx_player: int) -> GameState:
+    def get_player_view(self, idx_player: Optional[int]) -> GameState:
         masked_state = self.state.model_copy(deep=True)
         for i, player in enumerate(masked_state.list_player):
             if i != idx_player:
@@ -536,7 +534,7 @@ if __name__ == "__main__":
         current_player_idx = current_state.idx_player_active
         player_view = uno.get_player_view(current_player_idx)
         actions = uno.get_list_action()
-        action = players[current_player_idx].select_action(player_view, actions)
+        action = players[current_player_idx or 0].select_action(player_view, actions)
         uno.apply_action(action)
         uno.print_state()
 
