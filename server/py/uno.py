@@ -490,7 +490,7 @@ class Uno(Game):
                 cards_to_draw -= 1
             self.state.has_drawn = True
             self.state.cnt_to_draw = 0
-            if action.draw == 1: return
+            return
 
         move_to_next_player()
 
