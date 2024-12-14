@@ -232,6 +232,36 @@ class Uno(Game):
     #    )
     #    self.set_state(state)
 
+    def _is_card_playable(self, card_to_play: Card, top_card: Card) -> bool:
+        """
+        Determines if a card can be played on the current top card of the discard pile.
+
+        Args:
+            card_to_play (Card): The card the player intends to play.
+            top_card (Card): The card currently on the top of the discard pile.
+
+        Returns:
+            bool: True if the card can be played, False otherwise.
+        """
+        # Wild cards are always playable
+        if card_to_play.color == 'any':
+            return True
+
+        # Match by color
+        if card_to_play.color == top_card.color:
+            return True
+
+        # Match by number (for numbered cards)
+        if card_to_play.number is not None and card_to_play.number == top_card.number:
+            return True
+
+        # Match by symbol (for action cards like skip, reverse, draw2)
+        if card_to_play.symbol is not None and card_to_play.symbol == top_card.symbol:
+            return True
+
+        # If none of the conditions are met, the card is not playable
+        return False
+
     def set_state(self, state: GameState) -> None:
         self.state = state
 
