@@ -35,7 +35,7 @@ class Action(BaseModel):
     draw: Optional[int] = None
     uno: bool = False
 
-    def __lt__(self, other:'Action') -> bool:
+    def __lt__(self, other: 'Action') -> bool:
         return str(self) < str(other)
 
     def __str__(self) -> str:
@@ -199,7 +199,7 @@ class GameState(BaseModel):
     cnt_to_draw: int = 0
     has_drawn: bool = False
 
-    def __str__(self) -> str :
+    def __str__(self) -> str:
         s = '  - Last Card: '
         s += self.color[0].upper() if self.color else ""
         if self.list_card_discard is None:
@@ -225,12 +225,8 @@ class GameState(BaseModel):
             s += ", ".join([str(card) for card in player.list_card]) + '\n'
         return s[:-1]
 
+
 class Uno(Game):
-    #def __init__(self) -> None:
-    #    state = GameState(
-    #        cnt_player=3, phase=GamePhase.SETUP, direction=1, idx_player_active=0
-    #    )
-    #    self.set_state(state)
 
     def _is_card_playable(self, card_to_play: Card, top_card: Card) -> bool:
         """
@@ -424,9 +420,9 @@ class Uno(Game):
             elif card.symbol == "wilddraw4":
                 # Can only play if no matching color card in hand
                 if not any(
-                    c.color == self.state.color
-                    for c in current_player.list_card
-                    if c != card and c.color != "any"
+                        c.color == self.state.color
+                        for c in current_player.list_card
+                        if c != card and c.color != "any"
                 ):
                     for col in ["red", "green", "yellow", "blue"]:
                         if len(current_player.list_card) == 2:
@@ -442,13 +438,13 @@ class Uno(Game):
             else:
                 # Match by color, number, or symbol
                 if (
-                    card.color == self.state.color
-                    or (card.symbol and card.symbol == current_card.symbol)
-                    or (
+                        card.color == self.state.color
+                        or (card.symbol and card.symbol == current_card.symbol)
+                        or (
                         card.number is not None
                         and current_card.number is not None
                         and card.number == current_card.number
-                    )
+                )
                 ):
                     if card.symbol == "draw2":
                         # normal draw2 when cnt_to_draw=0
@@ -484,11 +480,10 @@ class Uno(Game):
 
         current_player = self.state.list_player[self.state.idx_player_active or 0]
 
-        def move_to_next_player() -> None :
+        def move_to_next_player() -> None:
             self.state.idx_player_active = ((self.state.idx_player_active or 0) + self.state.direction
-            ) % self.state.cnt_player
+                                            ) % self.state.cnt_player
             self.state.has_drawn = False
-
 
         if action and action.card:
             current_player.list_card.remove(action.card)
@@ -499,7 +494,7 @@ class Uno(Game):
                 self.state.direction *= -1
             elif action.card.symbol == "skip":
                 self.state.idx_player_active = ((self.state.idx_player_active or 0) + 2 * self.state.direction
-                ) % self.state.cnt_player
+                                                ) % self.state.cnt_player
                 if len(current_player.list_card) == 0:
                     self.state.phase = GamePhase.FINISHED
                 return
@@ -544,14 +539,14 @@ class Uno(Game):
                 )
         if masked_state.list_card_draw:
             masked_state.list_card_draw = [
-                Card(color=None, number=None, symbol=None)
-            ] * len(masked_state.list_card_draw)
+                                              Card(color=None, number=None, symbol=None)
+                                          ] * len(masked_state.list_card_draw)
         return masked_state
 
 
 class RandomPlayer(Player):
     def select_action(
-        self, state: GameState, actions: List[Action]
+            self, state: GameState, actions: List[Action]
     ) -> Optional[Action]:
         my_actions = actions
         if my_actions:
