@@ -268,49 +268,62 @@ class Uno(Game):
         if not self.state.list_card_draw:
             self.state.list_card_draw = self.state.LIST_CARD.copy()
             random.shuffle(self.state.list_card_draw)
+            print("[DEBUG] Initial draw pile shuffled with 108 cards.")
 
         if self.state.phase == GamePhase.SETUP:
             if self.state.idx_player_active is None:
                 self.state.idx_player_active = 0
 
-            if len(self.state.list_card_draw) == 0:
+            if not self.state.list_card_draw:
+                print("[DEBUG] No cards available in draw pile during setup.")
                 return
 
-            # deal cards
+            # Deal cards to players
             if len(self.state.list_player) < self.state.cnt_player:
                 for p in range(self.state.cnt_player):
                     player = PlayerState(name=f"Player{p}")
                     for _ in range(self.state.CNT_HAND_CARDS):
-                        if len(self.state.list_card_draw) > 0:
+                        if self.state.list_card_draw:
                             player.list_card.append(self.state.list_card_draw.pop())
                     self.state.list_player.append(player)
+                print("[DEBUG] Cards dealt to players.")
 
-            # add first card to discard pile
-            initial_card = self.state.list_card_draw.pop()
-            # Ensure first card is not wilddraw4
-            while (
-                initial_card.symbol == "wilddraw4"
-                and len(self.state.list_card_discard) == 0
-            ):
-                self.state.list_card_draw.append(initial_card)
-                random.shuffle(self.state.list_card_draw)
+            # Set the first discard pile card
+            max_attempts = 100  # Safeguard to avoid infinite loops
+            attempts = 0
+            while attempts < max_attempts:
                 initial_card = self.state.list_card_draw.pop()
+                if initial_card.symbol != "wilddraw4":
+                    self.state.list_card_discard = [initial_card]
+                    self.state.color = initial_card.color
+                    print(f"[DEBUG] First discard pile card set to {initial_card}.")
 
-            self.state.list_card_discard = [initial_card]
-            self.state.color = initial_card.color
-            if initial_card.symbol == "reverse":
-                self.state.direction *= -1
-            elif initial_card.symbol == "skip":
-                self.state.idx_player_active = (
-                    self.state.idx_player_active + 1
-                ) % self.state.cnt_player
-            elif initial_card.symbol == "draw2":
-                self.state.cnt_to_draw += 2
+                    # Handle special effects of the first card
+                    if initial_card.symbol == "reverse":
+                        self.state.direction *= -1
+                        print("[DEBUG] Direction reversed.")
+                    elif initial_card.symbol == "skip":
+                        self.state.idx_player_active = (
+                                                               self.state.idx_player_active + 1
+                                                       ) % self.state.cnt_player
+                        print(f"[DEBUG] Player skipped. New active player: {self.state.idx_player_active}.")
+                    elif initial_card.symbol == "draw2":
+                        self.state.cnt_to_draw += 2
+                        print(f"[DEBUG] Player must draw 2 cards. Pending draw count: {self.state.cnt_to_draw}.")
+                    break
+                else:
+                    # Return WILD DRAW 4 card to the draw pile and reshuffle
+                    self.state.list_card_draw.append(initial_card)
+                    random.shuffle(self.state.list_card_draw)
+                    print(
+                        f"[DEBUG] WILD DRAW 4 card moved back to the draw pile and reshuffled. Attempt {attempts + 1}.")
+                attempts += 1
 
-            initial_card = self.state.list_card_discard[-1]
-            self.state.color = initial_card.color
+            if attempts >= max_attempts:
+                raise RuntimeError("Failed to initialize a valid first discard card after multiple attempts.")
 
             self.state.phase = GamePhase.RUNNING
+            print("[DEBUG] Game phase set to RUNNING.")
 
     def get_state(self) -> GameState:
         return self.state
