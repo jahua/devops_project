@@ -5,6 +5,7 @@ This guide explains step-by-step how to containerize and deploy our FastAPI UNO 
 ## Prerequisites
 
 Before starting, ensure you have:
+
 1. Docker Desktop installed and running
 2. Google Cloud SDK installed
 3. A Google Cloud account
@@ -14,6 +15,7 @@ Before starting, ensure you have:
 ## Step 1: Understanding the Dockerfile
 
 First, let's understand what's in our `Dockerfile`:
+
 ```dockerfile
 FROM python:3.11-slim         # Base image with Python 3.11
 WORKDIR /code                 # Sets working directory in container
@@ -31,11 +33,13 @@ docker build -t uno_team12_image .
 ```
 
 Breaking down this command:
+
 - `docker build`: Command to create a Docker image
 - `-t uno_team12_image`: Tags our UNO game image as "uno_team12_image"
 - `.`: Tells Docker to look for `Dockerfile` in current directory
 
 After running this command:
+
 1. Docker reads our Dockerfile
 2. Downloads the Python base image
 3. Executes each instruction to create our image
@@ -48,6 +52,7 @@ docker run -d --name uno_team12_container -p 888:8080 uno_team12_image
 ```
 
 Breaking down this command:
+
 - `docker run`: Creates and starts a container
 - `-d`: Runs in detached mode (background)
 - `--name uno_team12_container`: Names our UNO game container
@@ -57,6 +62,7 @@ Breaking down this command:
 - `uno_team12_image`: The image name from Step 2
 
 Verify it's running:
+
 ```bash
 docker ps  # Lists running containers
 ```
@@ -66,10 +72,11 @@ Test the application at: `http://localhost:888`
 ## Step 4: Google Cloud Setup and Configuration
 
 1. **Install Google Cloud SDK**
-   - Download from: https://cloud.google.com/sdk/docs/install
+   - Download from: <https://cloud.google.com/sdk/docs/install>
    - Run the installer and follow the prompts
 
 2. **Initialize Google Cloud:**
+
    ```bash
    # Login to your Google account
    gcloud auth login
@@ -86,6 +93,7 @@ Test the application at: `http://localhost:888`
    ```
 
 3. **Configure Docker Authentication:**
+
    ```bash
    # Configure Docker to use Google Cloud (this was preconfigured so skip this step)
    gcloud auth configure-docker europe-west6-docker.pkg.dev
@@ -99,6 +107,7 @@ gcloud run deploy uno-team12 --port 8080 --source . --allow-unauthenticated --re
 ```
 
 Breaking down this command:
+
 - `gcloud run deploy`: Command to deploy to Cloud Run
 - `uno-team12`: Our service name
   - Creates URL: `https://uno-team12-xxxx-xx.run.app`
@@ -108,6 +117,7 @@ Breaking down this command:
 - `--region europe-west6`: Deploys to Zurich region
 
 Deployment Process:
+
 1. Code is uploaded to Google Cloud
 2. Cloud Build creates container image
 3. Image is deployed as a Cloud Run service
@@ -121,6 +131,7 @@ Deployment Process:
    - Verify WebSocket connections work
 
 2. **Monitor the Service:**
+
    ```bash
    # View service details
    gcloud run services describe uno-team12
