@@ -467,13 +467,13 @@ class UnoBenchmark(benchmark.Benchmark):
         idx_player_active = 0
 
         list_card_draw = []
-        for color in LIST_COLOR:
-            for number in range(10):
+        for color in ['red', 'blue', 'yellow']:  # no green cards
+            for number in range(1, 10):  # no 0 cards
                 card = Card(color=color, number=number, symbol=None)
                 list_card_draw.append(card)
 
-        card = Card(color='green', number=None, symbol='1')
-        idx_top = self.get_idx_top(list_card_draw, cnt_player) 
+        card = Card(color='green', number=0, symbol=None)
+        idx_top = self.get_idx_top(list_card_draw, cnt_player)
         list_card_draw[idx_top] = card
 
         state = GameState(
@@ -517,7 +517,7 @@ class UnoBenchmark(benchmark.Benchmark):
         hint += str_state_2
         hint += f'Error 2: Wrong player active.\n'
         hint += f'Player {idx_player_active} should be active, found Player {state.idx_player_active}.'
-        assert state.idx_player_active==idx_player_active, hint
+        assert state.idx_player_active == idx_player_active, hint
 
         list_action_found = self.game_server.get_list_action()
         list_action_expected = []
