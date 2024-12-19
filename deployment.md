@@ -202,3 +202,4 @@ gcloud run services delete uno-team12 --region europe-west6
 
 # Optional: Delete entire project
 gcloud projects delete uno-team12-project
+```
