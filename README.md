@@ -60,3 +60,8 @@ python benchmark/benchmark_dog.py python dog.Dog
 uvicorn server.py.main:app --reload
 start chrome http://localhost:8000
 ````
+
+cd devops
+docker build -t devops_server_image .
+
+docker run -d --name devops_team12_container -p 8000:8080 devops_server_image 
